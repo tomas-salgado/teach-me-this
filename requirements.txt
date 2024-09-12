@@ -36,3 +36,5 @@ typing_extensions==4.12.2
 urllib3==2.2.2
 Werkzeug==3.0.4
 wsproto==1.2.0
+gunicorn==20.1.0
+eventlet==0.30.2
