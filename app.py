@@ -50,4 +50,4 @@ def handle_start_session(data):
     emit('conversation_update', {'conversation_history': response['conversation_history']})
 
 if __name__ == '__main__':
-    socketio.run(app, debug=True)
+    socketio.run(app)
