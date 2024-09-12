@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Learning Chatbot</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            line-height: 1.6;
+            color: #e0e0e0;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #1e1e1e;
+        }
+        h1, h2 {
+            text-align: center;
+            color: #bb86fc;
+        }
+        #learning-material-form, #chat-interface {
+            background-color: #2d2d2d;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        #learning-material, #user-input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #444;
+            border-radius: 4px;
+            background-color: #3d3d3d;
+            color: #e0e0e0;
+            resize: vertical;
+            box-sizing: border-box;
+        }
+        button {
+            background-color: #bb86fc;
+            color: #1e1e1e;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            font-weight: bold;
+        }
+        button:hover {
+            background-color: #a370f7;
+        }
+        #chat {
+            height: 400px;
+            overflow-y: auto;
+            border: 1px solid #444;
+            border-radius: 4px;
+            padding: 10px;
+            margin-bottom: 10px;
+            background-color: #2d2d2d;
+        }
+        .message {
+            margin-bottom: 10px;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        .user-message {
+            background-color: #3d3d3d;
+            text-align: right;
+        }
+        .ai-message {
+            background-color: #4d4d4d;
+        }
+        .message-content {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            font-family: inherit;
+            margin: 0;
+        }
+        .input-container {
+            display: flex;
+            gap: 10px;
+        }
+        #user-input {
+            flex-grow: 1;
+        }
+        #progress-container {
+            width: 100%;
+            background-color: #444;
+            border-radius: 4px;
+            margin-bottom: 10px;
+        }
+        #progress-bar {
+            width: 0;
+            height: 20px;
+            background-color: #bb86fc;
+            border-radius: 4px;
+            transition: width 0.5s ease-in-out;
+        }
+        #progress-text {
+            text-align: center;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Teach Me This</h1>
+    
+    <div id="learning-material-form">
+        <h2>What do you want to learn?</h2>
+        <textarea id="learning-material" rows="5" placeholder="Paste an article, lecture notes, or any other text you want to learn..."></textarea>
+        <p>Input your study material, and we'll help you learn it through interactive Q&A!</p>
+        <button onclick="startLearningSession()">Start Learning Session</button>
+    </div>
+
+    <div id="chat-interface" style="display: none;">
+        <div id="chat"></div>
+        <div class="input-container">
+            <input type="text" id="user-input" placeholder="Type your message...">
+            <button onclick="sendMessage()">Send</button>
+        </div>
+    </div>
+
+    <div id="progress-container" style="display: none;">
+        <div id="progress-bar"></div>
+        <div id="progress-text"></div>
+    </div>
+
+    <script>
+        const socket = io();
+        let conversationHistory = [];
+        let learningMaterial = "";
+        let currentAIMessage = null;
+
+        function startLearningSession() {
+            learningMaterial = document.getElementById('learning-material').value;
+            if (learningMaterial.trim() === "") {
+                alert("Please enter some learning material before starting the session.");
+                return;
+            }
+
+            document.getElementById('learning-material-form').style.display = 'none';
+            document.getElementById('chat-interface').style.display = 'block';
+            
+            updateProgressBar(0);
+
+            socket.emit('start_session', { learning_material: learningMaterial });
+        }
+
+        function sendMessage() {
+            const userInput = document.getElementById('user-input').value;
+            if (userInput.trim() === "") return;
+            
+            document.getElementById('user-input').value = '';
+            
+            addMessageToChat('user', userInput);
+            
+            currentAIMessage = null; 
+            
+            socket.emit('user_message', {
+                message: userInput,
+                conversation_history: conversationHistory,
+                learning_material: learningMaterial
+            });
+        }
+
+        function addMessageToChat(role, content) {
+            const chatDiv = document.getElementById('chat');
+            let messageDiv = document.querySelector(`.message.${role}-message:last-child`);
+            
+            if (!messageDiv) {
+                messageDiv = document.createElement('div');
+                messageDiv.classList.add('message', `${role}-message`);
+                messageDiv.innerHTML = `<strong>${role === 'user' ? 'You' : 'AI'}:</strong> <pre class="message-content"></pre>`;
+                chatDiv.appendChild(messageDiv);
+            }
+            
+            const contentPre = messageDiv.querySelector('.message-content');
+            contentPre.textContent += content;
+            chatDiv.scrollTop = chatDiv.scrollHeight;
+            return messageDiv;
+        }
+
+        socket.on('ai_response_chunk', function(data) {
+            if (!currentAIMessage) {
+                currentAIMessage = addMessageToChat('ai', '');
+            }
+            const contentSpan = currentAIMessage.querySelector('.message-content');
+            contentSpan.textContent += data.text;
+            document.getElementById('chat').scrollTop = document.getElementById('chat').scrollHeight;
+        });
+
+        socket.on('progress_update', function(data) {
+            console.log('Progress:', data);
+            if (data.percentage !== undefined) {
+                updateProgressBar(data.percentage);
+            }
+        });
+
+        socket.on('conversation_update', function(data) {
+            conversationHistory = data.conversation_history;
+            currentAIMessage = null;
+        });
+
+        socket.on('start_session_response', function(data) {
+            currentAIMessage = addMessageToChat('ai', data.response);
+        });
+
+        // Allow sending messages with Enter key
+        document.getElementById('user-input').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+
+        function updateProgressBar(percentage) {
+            const progressContainer = document.getElementById('progress-container');
+            const progressBar = document.getElementById('progress-bar');
+            const progressText = document.getElementById('progress-text');
+
+            progressContainer.style.display = 'block';
+            progressBar.style.width = `${percentage}%`;
+            progressText.textContent = `${percentage}% mastery achieved`;
+        }
+    </script>
+</body>
+</html>
