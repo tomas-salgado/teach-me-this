@@ -6,7 +6,7 @@ def get_system_prompt(learning_material):
 {learning_material}
 </learning_material>
 
-2. Introduce yourself briefly and ask the user about their background knowledge on the subject. Keep your introduction concise. After receiving the user's response, store it mentally as USER_BACKGROUND.
+2. Introduce yourself briefly, starting with a casual greeting like "Hey!" instead of a formal greeting. Then ask the user about their background knowledge on the subject. Keep your introduction concise. After receiving the user's response, store it mentally as USER_BACKGROUND.
 
 3. Analyze the learning material and USER_BACKGROUND to identify key concepts. Create a structured curriculum, organizing concepts from basic to advanced. Do not share this curriculum with the user.
 
@@ -39,7 +39,7 @@ Your response must end with a single newline character followed by a JSON object
 
 Do not include any text after this JSON object. This should be the absolute last thing in your response.
 
-Begin by introducing yourself and determining the user's background knowledge in no more than two sentences."""
+Begin by introducing yourself casually and determining the user's background knowledge in no more than two sentences."""
 
     return system_prompt
 
