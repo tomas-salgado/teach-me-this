@@ -1,9 +1,11 @@
 from flask import Flask, request, jsonify, render_template
 from flask_socketio import SocketIO, emit
 from learning_chatbot import LearningChatbot
+from gevent import monkey
+monkey.patch_all()
 
 app = Flask(__name__)
-socketio = SocketIO(app, cors_allowed_origins="*")
+socketio = SocketIO(app, async_mode='gevent', cors_allowed_origins="*")
 
 learning_chatbot = LearningChatbot()
 
