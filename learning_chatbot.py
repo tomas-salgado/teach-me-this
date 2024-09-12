@@ -1,10 +1,16 @@
+import os
 import anthropic
 import json
 from system_prompt import get_system_prompt
 
 class LearningChatbot:
     def __init__(self):
-        self.client = anthropic.Anthropic()
+        api_key = os.getenv("ANTHROPIC_API_KEY")
+        
+        if not api_key:
+            raise ValueError("ANTHROPIC_API_KEY environment variable is not set")
+        
+        self.client = anthropic.Anthropic(api_key=api_key)
         self.conversation_history = []
         self.learning_material = None
 
@@ -66,11 +72,9 @@ class LearningChatbot:
         self.learning_material = learning_material
         self.conversation_history = conversation_history
 
-        # Add the new user message
         self.conversation_history.append({"role": "user", "content": user_input})
 
-        # Ensure we keep the first user message and the most recent messages
-        if len(self.conversation_history) > 10:  # Adjust this number as needed
+        if len(self.conversation_history) > 10: 
             first_user_message = next((msg for msg in self.conversation_history if msg["role"] == "user"), None)
             self.conversation_history = [first_user_message] + self.conversation_history[-9:]
 
@@ -79,7 +83,6 @@ class LearningChatbot:
 
         self.conversation_history.append({"role": "assistant", "content": ai_response})
 
-        # Add a progress check after each user interaction
         progress_response = self.get_progress()
         progress_data = self.extract_progress(progress_response)
         if progress_data:
